@@ -178,6 +178,7 @@
            config_microp_scheme .eq. 'mp_thompson'          .or. &
            config_microp_scheme .eq. 'mp_thompson_aerosols' .or. &
            config_microp_scheme .eq. 'mp_tcwa2'             .or. &
+           config_microp_scheme .eq. 'mp_nssl2m'            .or. &
            config_microp_scheme .eq. 'mp_wsm6')) then
 
     write(mpas_err_message,'(A,A20)') 'illegal value for config_microp_scheme:', &

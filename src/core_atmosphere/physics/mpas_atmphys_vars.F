@@ -203,14 +203,22 @@
     qr_p,             &!rain mixing ratio                                                   [kg/kg]
     qi_p,             &!cloud ice mixing ratio                                              [kg/kg]
     qs_p,             &!snow mixing ratio                                                   [kg/kg]
-    qg_p               !graupel mixing ratio                                                [kg/kg]
+    qg_p,             &!graupel mixing ratio                                                [kg/kg]
+    qh_p               !hail mixing ratio                                                   [kg/kg]
 
  real(kind=RKIND),dimension(:,:,:),allocatable:: &
     nc_p,             &!cloud water droplet number concentration                             [#/kg]
     ni_p,             &!cloud ice crystal number concentration                               [#/kg]
     nr_p,             &!rain drop number concentration                                       [#/kg]
     ns_p,             &!snow number concentration                                            [#/kg]
-    ng_p               !graupel number concentration                                         [#/kg]
+    ng_p,             &!graupel number concentration                                         [#/kg]
+    nh_p,             &!hail number concentration                                            [#/kg]
+    nccn_p,           &!cloud condensation nuclei number concentration                       [#/kg]
+    volg_p,           &!graupel volume                                                      [m3/kg]
+    volh_p,           &!hail volume                                                         [m3/kg]
+    zrw_p,            &!rain reflectivity                                                   [m6/kg]
+    zgw_p,            &!graupel reflectivity                                                [m6/kg]
+    zhw_p              !hail reflectivity                                                   [m6/kg]
 
 !... added for tcwa microphysics:
  real(kind=RKIND),dimension(:,:,:),allocatable:: &
@@ -278,6 +286,8 @@
     snowncv_p,        &!
     graupelnc_p,      &!
     graupelncv_p,     &!
+    hailnc_p,         &!
+    hailncv_p,        &!
     sr_p
 
  integer:: & 

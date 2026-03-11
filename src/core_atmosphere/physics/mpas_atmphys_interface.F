@@ -566,15 +566,21 @@
 
 !local pointers:
  character(len=StrKIND),pointer:: mp_scheme
- integer,pointer:: index_qv,index_qc,index_qr,index_qi,index_qs,index_qg
- integer,pointer:: index_nc,index_ni,index_nr,index_ns,index_ng,index_nifa,index_nwfa
+ logical,pointer:: config_nssl_3moment
+ logical,pointer:: config_nssl_hail_on, config_nssl_ccn_on
+ integer,pointer:: index_qv,index_qc,index_qr,index_qi,index_qs,index_qg,index_qh
+ integer,pointer:: index_zrw,index_zgw,index_zhw
+ integer,pointer:: index_nc,index_ni,index_nr,index_ns,index_ng,index_nh,index_nccn
+ integer,pointer:: index_volg,index_volh
+ integer,pointer:: index_nifa,index_nwfa
  real(kind=RKIND),dimension(:),pointer    :: nifa2d,nwfa2d,nt_c,mu_c
  real(kind=RKIND),dimension(:),pointer    :: xland
  real(kind=RKIND),dimension(:,:),pointer  :: zgrid,w
  real(kind=RKIND),dimension(:,:),pointer  :: zz,exner,pressure_b
  real(kind=RKIND),dimension(:,:),pointer  :: rho_zz,theta_m,pressure_p
- real(kind=RKIND),dimension(:,:),pointer  :: qv,qc,qr,qi,qs,qg
- real(kind=RKIND),dimension(:,:),pointer  :: nc,ni,nr,ns,ng,nifa,nwfa
+ real(kind=RKIND),dimension(:,:),pointer  :: qv,qc,qr,qi,qs,qg,qh
+ real(kind=RKIND),dimension(:,:),pointer  :: nc,ni,nr,ns,ng,nh,nccn,nifa,nwfa
+ real(kind=RKIND),dimension(:,:),pointer  :: volg,volh,zrw,zgw,zhw
  real(kind=RKIND),dimension(:,:),pointer  :: rainprod,evapprod,refl10cm
  real(kind=RKIND),dimension(:,:),pointer  :: re_cloud,re_ice,re_snow
  real(kind=RKIND),dimension(:,:),pointer  :: ZDR,KDP,LDR,RHV
@@ -588,6 +594,9 @@
 !-----------------------------------------------------------------------------------------------------------------
 
  call mpas_pool_get_config(configs,'config_microp_scheme',mp_scheme)
+ call mpas_pool_get_config(configs,'config_nssl_3moment',config_nssl_3moment)
+ call mpas_pool_get_config(configs,'config_nssl_hail_on',config_nssl_hail_on)
+ call mpas_pool_get_config(configs,'config_nssl_ccn_on',config_nssl_ccn_on)
 
  call mpas_pool_get_array(mesh,'zgrid',zgrid)
  call mpas_pool_get_array(mesh,'zz'   ,zz   )
@@ -631,7 +640,7 @@
 
 !initialize cloud water species and aerosols as function of cloud microphysics scheme:
  mp_select: select case(trim(mp_scheme))
-    case("mp_thompson","mp_thompson_aerosols","mp_wsm6","mp_tcwa2")
+    case("mp_thompson","mp_thompson_aerosols","mp_wsm6","mp_tcwa2","mp_nssl2m")
        call mpas_pool_get_dimension(state,'index_qi',index_qi)
        call mpas_pool_get_dimension(state,'index_qs',index_qs)
        call mpas_pool_get_dimension(state,'index_qg',index_qg)
@@ -750,6 +759,77 @@
              enddo
              enddo
 
+          case("mp_nssl2m")
+            call mpas_pool_get_dimension(state,'index_nc'  ,index_nc  )
+            call mpas_pool_get_dimension(state,'index_ni'  ,index_ni  )
+            call mpas_pool_get_dimension(state,'index_nr'  ,index_nr  )
+            call mpas_pool_get_dimension(state,'index_ns'  ,index_ns  )
+            call mpas_pool_get_dimension(state,'index_ng'  ,index_ng  )
+            call mpas_pool_get_dimension(state,'index_volg' ,index_volg  )
+            call mpas_pool_get_array(diag_physics,'refl10cm',refl10cm)
+             nc   => scalars(index_nc,:,:)
+             ni   => scalars(index_ni,:,:)
+             nr   => scalars(index_nr,:,:)
+             ns   => scalars(index_ns,:,:)
+             ng   => scalars(index_ng,:,:)
+             IF ( config_nssl_ccn_on ) THEN
+              call mpas_pool_get_dimension(state,'index_nccn' ,index_nccn  )
+              nccn => scalars(index_nccn,:,:)
+             ENDIF
+             volg => scalars(index_volg,:,:)
+             IF ( config_nssl_hail_on ) THEN
+              call mpas_pool_get_dimension(state,'index_qh'  ,index_qh  )
+              call mpas_pool_get_dimension(state,'index_nh'  ,index_nh  )
+              call mpas_pool_get_dimension(state,'index_volh' ,index_volh  )
+               qh   => scalars(index_qh,:,:)
+               nh   => scalars(index_nh,:,:)
+               volh => scalars(index_volh,:,:)
+             ENDIF
+
+             do j = jts, jte
+             do k = kts, kte
+             do i = its, ite
+               IF ( config_nssl_hail_on ) THEN
+                qh_p(i,k,j)   = scalars(index_qh,k,i)
+                nh_p(i,k,j)   = scalars(index_nh,k,i)
+                volh_p(i,k,j) = scalars(index_volh,k,i)
+               ENDIF
+                nc_p(i,k,j) = scalars(index_nc,k,i)
+                ni_p(i,k,j) = scalars(index_ni,k,i)
+                nr_p(i,k,j) = scalars(index_nr,k,i)
+                ns_p(i,k,j) = scalars(index_ns,k,i)
+                ng_p(i,k,j) = scalars(index_ng,k,i)
+                IF ( config_nssl_ccn_on ) THEN
+                 nccn_p(i,k,j) = scalars(index_nccn,k,i)
+                ENDIF
+                volg_p(i,k,j) = scalars(index_volg,k,i)
+                refl10cm_p(i,k,j) = refl10cm(k,i)
+             enddo
+             enddo
+             enddo
+
+             IF ( config_nssl_3moment ) THEN
+               call mpas_pool_get_dimension(state,'index_zrw'  ,index_zrw  )
+               call mpas_pool_get_dimension(state,'index_zgw'  ,index_zgw  )
+               zrw   => scalars(index_zrw,:,:)
+               zgw   => scalars(index_zgw,:,:)
+               IF ( config_nssl_hail_on ) THEN
+                call mpas_pool_get_dimension(state,'index_zhw'  ,index_zhw  )
+                zhw   => scalars(index_zhw,:,:)
+               ENDIF
+               do j = jts, jte
+               do k = kts, kte
+               do i = its, ite
+                  zrw_p(i,k,j) = scalars(index_zrw,k,i)
+                  zgw_p(i,k,j) = scalars(index_zgw,k,i)
+                  IF ( config_nssl_hail_on ) THEN
+                    zhw_p(i,k,j) = scalars(index_zhw,k,i)
+                  ENDIF
+               enddo
+               enddo
+               enddo
+             ENDIF
+
           case default
        end select mp2_select
 
@@ -758,7 +838,7 @@
 
 !begin calculation of cloud microphysics tendencies:
  mp_tend_select: select case(trim(mp_scheme))
-    case("mp_thompson","mp_thompson_aerosols","mp_wsm6","mp_tcwa2")
+    case("mp_thompson","mp_thompson_aerosols","mp_wsm6","mp_tcwa2","mp_nssl2m")
        call mpas_pool_get_array(tend_physics,'rthmpten',rthmpten)
        call mpas_pool_get_array(tend_physics,'rqvmpten',rqvmpten)
        call mpas_pool_get_array(tend_physics,'rqcmpten',rqcmpten)
@@ -853,8 +933,13 @@
 
 !local pointers:
  character(len=StrKIND),pointer:: mp_scheme
- integer,pointer:: index_qv,index_qc,index_qr,index_qi,index_qs,index_qg
- integer,pointer:: index_nc,index_ni,index_nr,index_ns,index_ng,index_nifa,index_nwfa
+ logical,pointer:: config_nssl_3moment
+ logical,pointer:: config_nssl_hail_on, config_nssl_ccn_on
+ integer,pointer:: index_qv,index_qc,index_qr,index_qi,index_qs,index_qg,index_qh
+ integer,pointer:: index_zrw,index_zgw,index_zhw
+ integer,pointer:: index_nc,index_ni,index_nr,index_ns,index_ng,index_nh,index_nccn
+ integer,pointer:: index_volg,index_volh
+ integer,pointer:: index_nifa,index_nwfa
  real(kind=RKIND),dimension(:),pointer    :: surface_pressure,tend_sfc_pressure
  real(kind=RKIND),dimension(:),pointer    :: nifa2d,nwfa2d
  real(kind=RKIND),dimension(:,:),pointer  :: zgrid
@@ -862,8 +947,9 @@
  real(kind=RKIND),dimension(:,:),pointer  :: rho_zz,theta_m,pressure_p
  real(kind=RKIND),dimension(:,:),pointer  :: rt_diabatic_tend
  real(kind=RKIND),dimension(:,:),pointer  :: dtheta_dt_mp
- real(kind=RKIND),dimension(:,:),pointer  :: qv,qc,qr,qi,qs,qg
- real(kind=RKIND),dimension(:,:),pointer  :: nc,ni,nr,ns,ng,nifa,nwfa
+ real(kind=RKIND),dimension(:,:),pointer  :: qv,qc,qr,qi,qs,qg,qh
+ real(kind=RKIND),dimension(:,:),pointer  :: nc,ni,nr,ns,ng,nh,nccn,nifa,nwfa
+ real(kind=RKIND),dimension(:,:),pointer  :: volg,volh,zrw,zgw,zhw
  real(kind=RKIND),dimension(:,:),pointer  :: rainprod,evapprod,refl10cm
  real(kind=RKIND),dimension(:,:),pointer  :: re_cloud,re_ice,re_snow
  real(kind=RKIND),dimension(:,:),pointer  :: ZDR,KDP,LDR,RHV
@@ -880,6 +966,9 @@
 !-----------------------------------------------------------------------------------------------------------------
 
  call mpas_pool_get_config(configs,'config_microp_scheme',mp_scheme)
+ call mpas_pool_get_config(configs,'config_nssl_3moment',config_nssl_3moment)
+ call mpas_pool_get_config(configs,'config_nssl_hail_on',config_nssl_hail_on)
+ call mpas_pool_get_config(configs,'config_nssl_ccn_on',config_nssl_ccn_on)
 
  call mpas_pool_get_array(mesh,'zz'   ,zz   )
  call mpas_pool_get_array(mesh,'zgrid',zgrid)
@@ -976,7 +1065,7 @@
 
 !update cloud water species and aerosols as functions of cloud microphysics schemes:
  mp_select: select case(trim(mp_scheme))
-    case("mp_thompson","mp_thompson_aerosols","mp_wsm6","mp_tcwa2")
+    case("mp_thompson","mp_thompson_aerosols","mp_wsm6","mp_tcwa2","mp_nssl2m")
        call mpas_pool_get_dimension(state,'index_qi',index_qi)
        call mpas_pool_get_dimension(state,'index_qs',index_qs)
        call mpas_pool_get_dimension(state,'index_qg',index_qg)
@@ -1100,6 +1189,79 @@
              enddo
              enddo
 
+       case("mp_nssl2m")
+
+         call mpas_pool_get_dimension(state,'index_nc'  ,index_nc  )
+         call mpas_pool_get_dimension(state,'index_ni'  ,index_ni  )
+         call mpas_pool_get_dimension(state,'index_nr'  ,index_nr  )
+         call mpas_pool_get_dimension(state,'index_ns'  ,index_ns  )
+         call mpas_pool_get_dimension(state,'index_ng'  ,index_ng  )
+         call mpas_pool_get_dimension(state,'index_volg'  ,index_volg  )
+         call mpas_pool_get_array(diag_physics,'refl10cm',refl10cm)
+
+          IF ( config_nssl_hail_on ) THEN
+            call mpas_pool_get_dimension(state,'index_qh'  ,index_qh  )
+            call mpas_pool_get_dimension(state,'index_nh'  ,index_nh  )
+            call mpas_pool_get_dimension(state,'index_volh'  ,index_volh  )
+            qh   => scalars(index_qh,:,:)
+            nh   => scalars(index_nh,:,:)
+            volh => scalars(index_volh,:,:)
+          ENDIF
+          ni   => scalars(index_ni,:,:)
+          nr   => scalars(index_nr,:,:)
+          nc   => scalars(index_nc,:,:)
+          ns   => scalars(index_ns,:,:)
+          ng   => scalars(index_ng,:,:)
+          volg => scalars(index_volg,:,:)
+          IF ( config_nssl_ccn_on ) THEN
+            call mpas_pool_get_dimension(state,'index_nccn'  ,index_nccn  )
+            nccn => scalars(index_nccn,:,:)
+          ENDIF
+
+          do j = jts, jte
+          do k = kts, kte
+          do i = its, ite
+             IF ( config_nssl_hail_on ) THEN
+              scalars(index_qh,k,i)   = qh_p(i,k,j)
+              scalars(index_nh,k,i)   = nh_p(i,k,j)
+              scalars(index_volh,k,i) = volh_p(i,k,j)
+             ENDIF
+             scalars(index_ni,k,i) = ni_p(i,k,j)
+             scalars(index_nr,k,i) = nr_p(i,k,j)
+             scalars(index_nc,k,i) = nc_p(i,k,j)
+             scalars(index_ns,k,i) = ns_p(i,k,j)
+             scalars(index_ng,k,i) = ng_p(i,k,j)
+             IF ( config_nssl_ccn_on ) THEN
+               scalars(index_nccn,k,i) = nccn_p(i,k,j)
+             ENDIF
+             scalars(index_volg,k,i) = volg_p(i,k,j)
+             refl10cm(k,i) = refl10cm_p(i,k,j)
+          enddo
+          enddo
+          enddo
+
+          IF ( config_nssl_3moment ) THEN
+            call mpas_pool_get_dimension(state,'index_zrw'  ,index_zrw  )
+            call mpas_pool_get_dimension(state,'index_zgw'  ,index_zgw  )
+            zrw   => scalars(index_zrw,:,:)
+            zgw   => scalars(index_zgw,:,:)
+            IF ( config_nssl_hail_on ) THEN
+              call mpas_pool_get_dimension(state,'index_zhw'  ,index_zhw  )
+              zhw   => scalars(index_zhw,:,:)
+            ENDIF
+            do j = jts, jte
+            do k = kts, kte
+            do i = its, ite
+               scalars(index_zrw,k,i) = zrw_p(i,k,j)
+               scalars(index_zgw,k,i) = zgw_p(i,k,j)
+               IF ( config_nssl_hail_on ) THEN
+                scalars(index_zhw,k,i) = zhw_p(i,k,j)
+               ENDIF
+            enddo
+            enddo
+            enddo
+          ENDIF
+
           case default
        end select mp2_select
 
@@ -1108,7 +1270,7 @@
 
 !end calculation of cloud microphysics tendencies:
  mp_tend_select: select case(trim(mp_scheme))
-    case("mp_thompson","mp_thompson_aerosols","mp_wsm6","mp_tcwa2")
+    case("mp_thompson","mp_thompson_aerosols","mp_wsm6","mp_tcwa2","mp_nssl2m")
        call mpas_pool_get_array(tend_physics,'rthmpten',rthmpten)
        call mpas_pool_get_array(tend_physics,'rqvmpten',rqvmpten)
        call mpas_pool_get_array(tend_physics,'rqcmpten',rqcmpten)
