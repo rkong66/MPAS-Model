@@ -583,7 +583,7 @@
  real(kind=RKIND),dimension(:,:),pointer  :: volg,volh,zrw,zgw,zhw
  real(kind=RKIND),dimension(:,:),pointer  :: rainprod,evapprod,refl10cm
  real(kind=RKIND),dimension(:,:),pointer  :: re_cloud,re_ice,re_snow
- real(kind=RKIND),dimension(:,:),pointer  :: ZDR,KDP,LDR,RHV
+ real(kind=RKIND),dimension(:,:),pointer  :: zdr,kdp,smlf,gmlf  !for tcwa2
  real(kind=RKIND),dimension(:,:),pointer  :: rthmpten,rqvmpten,rqcmpten,rqrmpten,rqimpten,rqsmpten,rqgmpten
  real(kind=RKIND),dimension(:,:),pointer  :: rncmpten,rnimpten,rnrmpten,rnsmpten,rngmpten,rnifampten,rnwfampten
  real(kind=RKIND),dimension(:,:,:),pointer:: scalars
@@ -726,12 +726,12 @@
              call mpas_pool_get_dimension(state,'index_ni',index_ni)
              call mpas_pool_get_dimension(state,'index_ns',index_ns)
              call mpas_pool_get_dimension(state,'index_ng',index_ng)
-             call mpas_pool_get_array(diag_physics,'refl10cm',refl10cm)
-             call mpas_pool_get_array(diag_physics,'ZDR' ,ZDR )
-             call mpas_pool_get_array(diag_physics,'KDP' ,KDP )
-             call mpas_pool_get_array(diag_physics,'LDR' ,LDR )
-             call mpas_pool_get_array(diag_physics,'RHV' ,RHV )
-             call mpas_pool_get_array(sfc_input,'xland',xland)
+             call mpas_pool_get_array(diag_physics,'refl10cm',refl10cm )
+             call mpas_pool_get_array(diag_physics,'zdr' ,zdr )
+             call mpas_pool_get_array(diag_physics,'kdp' ,kdp )
+             call mpas_pool_get_array(diag_physics,'smlf' ,smlf )
+             call mpas_pool_get_array(diag_physics,'gmlf' ,gmlf )
+             call mpas_pool_get_array(sfc_input,'xland' ,xland )
              nc   => scalars(index_nc,:,:)
              nr   => scalars(index_nr,:,:)
              ni   => scalars(index_ni,:,:)
@@ -751,10 +751,10 @@
                 ns_p(i,k,j) = ns(k,i)
                 ng_p(i,k,j) = ng(k,i)
                 refl10cm_p(i,k,j) = refl10cm(k,i)
-                ZDR_p(i,k,j) = ZDR(k,i)
-                KDP_p(i,k,j) = KDP(k,i)
-                LDR_p(i,k,j) = LDR(k,i)
-                RHV_p(i,k,j) = RHV(k,i)
+                zdr_p(i,k,j) = zdr(k,i)
+                kdp_p(i,k,j) = kdp(k,i)
+                smlf_p(i,k,j) = smlf(k,i)
+                gmlf_p(i,k,j) = gmlf(k,i)
              enddo
              enddo
              enddo
@@ -952,7 +952,7 @@
  real(kind=RKIND),dimension(:,:),pointer  :: volg,volh,zrw,zgw,zhw
  real(kind=RKIND),dimension(:,:),pointer  :: rainprod,evapprod,refl10cm
  real(kind=RKIND),dimension(:,:),pointer  :: re_cloud,re_ice,re_snow
- real(kind=RKIND),dimension(:,:),pointer  :: ZDR,KDP,LDR,RHV
+ real(kind=RKIND),dimension(:,:),pointer  :: zdr,kdp,smlf,gmlf  !for tcwa2
  real(kind=RKIND),dimension(:,:),pointer  :: rthmpten,rqvmpten,rqcmpten,rqrmpten,rqimpten,rqsmpten,rqgmpten
  real(kind=RKIND),dimension(:,:),pointer  :: rncmpten,rnimpten,rnrmpten,rnsmpten,rngmpten,rnifampten,rnwfampten
  real(kind=RKIND),dimension(:,:,:),pointer:: scalars
@@ -1156,17 +1156,17 @@
                 case default
              end select mp3_select
 
-          case("mp_tcwa2")
+         case("mp_tcwa2")
              call mpas_pool_get_dimension(state,'index_nc',index_nc)
              call mpas_pool_get_dimension(state,'index_nr',index_nr)
              call mpas_pool_get_dimension(state,'index_ni',index_ni)
              call mpas_pool_get_dimension(state,'index_ns',index_ns)
              call mpas_pool_get_dimension(state,'index_ng',index_ng)
-             call mpas_pool_get_array(diag_physics,'refl10cm',refl10cm)
-             call mpas_pool_get_array(diag_physics,'ZDR' ,ZDR )
-             call mpas_pool_get_array(diag_physics,'KDP' ,KDP )
-             call mpas_pool_get_array(diag_physics,'LDR' ,LDR )
-             call mpas_pool_get_array(diag_physics,'RHV' ,RHV )
+             call mpas_pool_get_array(diag_physics,'refl10cm',refl10cm )
+             call mpas_pool_get_array(diag_physics,'zdr' ,zdr )
+             call mpas_pool_get_array(diag_physics,'kdp' ,kdp )
+             call mpas_pool_get_array(diag_physics,'smlf' ,smlf )
+             call mpas_pool_get_array(diag_physics,'gmlf' ,gmlf )
              nc   => scalars(index_nc,:,:)
              nr   => scalars(index_nr,:,:)
              ni   => scalars(index_ni,:,:)
@@ -1181,10 +1181,10 @@
                 ns(k,i) = ns_p(i,k,j)
                 ng(k,i) = ng_p(i,k,j)
                 refl10cm(k,i) = refl10cm_p(i,k,j)
-                ZDR(k,i) = ZDR_p(i,k,j)
-                KDP(k,i) = KDP_p(i,k,j)
-                LDR(k,i) = LDR_p(i,k,j)
-                RHV(k,i) = RHV_p(i,k,j)
+                zdr(k,i) = zdr_p(i,k,j)
+                kdp(k,i) = kdp_p(i,k,j)
+                smlf(k,i) = smlf_p(i,k,j)
+                gmlf(k,i) = gmlf_p(i,k,j)
              enddo
              enddo
              enddo

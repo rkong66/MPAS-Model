@@ -220,9 +220,9 @@
     zgw_p,            &!graupel reflectivity                                                [m6/kg]
     zhw_p              !hail reflectivity                                                   [m6/kg]
 
-!... added for tcwa microphysics:
+!... added for tcwa2 microphysics:
  real(kind=RKIND),dimension(:,:,:),allocatable:: &
-    ZDR_p,KDP_p,LDR_p,RHV_p
+    zdr_p,kdp_p,smlf_p,gmlf_p
 
 !... arrays located at w (vertical velocity) points, or at interface between layers:
  real(kind=RKIND),dimension(:,:,:),allocatable:: &

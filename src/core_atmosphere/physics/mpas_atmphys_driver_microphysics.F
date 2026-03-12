@@ -181,10 +181,10 @@
           if(.not.allocated(ns_p) ) allocate(ns_p(ims:ime,kms:kme,jms:jme))
           if(.not.allocated(ng_p) ) allocate(ng_p(ims:ime,kms:kme,jms:jme))
           if(.not.allocated(xland_p)) allocate(xland_p(ims:ime,jms:jme))
-          if(.not.allocated(ZDR_p)) allocate(ZDR_p(ims:ime,kms:kme,jms:jme))
-          if(.not.allocated(KDP_p)) allocate(KDP_p(ims:ime,kms:kme,jms:jme))
-          if(.not.allocated(LDR_p)) allocate(LDR_p(ims:ime,kms:kme,jms:jme))
-          if(.not.allocated(RHV_p)) allocate(RHV_p(ims:ime,kms:kme,jms:jme))
+          if(.not.allocated(zdr_p)) allocate(zdr_p(ims:ime,kms:kme,jms:jme))
+          if(.not.allocated(kdp_p)) allocate(kdp_p(ims:ime,kms:kme,jms:jme))
+          if(.not.allocated(smlf_p)) allocate(smlf_p(ims:ime,kms:kme,jms:jme))
+          if(.not.allocated(gmlf_p)) allocate(gmlf_p(ims:ime,kms:kme,jms:jme))
 
        case("mp_nssl2m")
           if(.not.allocated(qh_p)        ) allocate(qh_p(ims:ime,kms:kme,jms:jme))
@@ -294,10 +294,10 @@
           if(allocated(ns_p) ) deallocate(ns_p )
           if(allocated(ng_p) ) deallocate(ng_p )
           if(allocated(xland_p)) deallocate(xland_p)
-          if(allocated(ZDR_p))  deallocate(ZDR_p)
-          if(allocated(KDP_p))  deallocate(KDP_p)
-          if(allocated(LDR_p))  deallocate(LDR_p)
-          if(allocated(RHV_p))  deallocate(RHV_p)
+          if(allocated(zdr_p))  deallocate(zdr_p)
+          if(allocated(kdp_p))  deallocate(kdp_p)
+          if(allocated(smlf_p))  deallocate(smlf_p)
+          if(allocated(gmlf_p))  deallocate(gmlf_p)
 
        case("mp_nssl2m")
           if(allocated(qh_p)         ) deallocate(qh_p         )
@@ -565,7 +565,7 @@
                      QG = qg_p, NC = nc_p, NR = nr_p, NI = ni_p, NS = ns_p, NG = ng_p,        &
                      SR = sr_p, RAINNC = rainnc_p, RAINNCV = rainncv_p, SNOWNC = snownc_p,    &
                      SNOWNCV = snowncv_p, GRAPNC = graupelnc_p, GRAPNCV = graupelncv_p,       &
-                     DBZM = refl10cm_p, ZDR = ZDR_p, KDP = KDP_p, LDR = LDR_p, RHV = RHV_p,   &
+                     DBZM = refl10cm_p, ZDR = zdr_p, KDP = kdp_p, SMLF = smlf_p, GMLF = gmlf_p,&
                      re_cloud = recloud_p, re_ice = reice_p, re_snow = resnow_p,              &
                      has_reqc = has_reqc, has_reqi = has_reqi, has_reqs = has_reqs,           &
                      IDS = ids, IDE = ide, JDS = jds, JDE = jde, KDS = kds, KDE = kde,        &
@@ -657,7 +657,7 @@
  character(len=StrKIND),pointer:: microp_scheme
  integer,pointer:: nCellsSolve
  real,dimension(:),pointer:: graupelncv,rainncv,snowncv,sr,hailncv
- real(kind=RKIND),dimension(:,:),pointer  :: ZDR,KDP,LDR,RHV
+ real(kind=RKIND),dimension(:,:),pointer  :: zdr,kdp,smlf,gmlf  !for tcwa2
 
 !local variables and arrays:
  integer:: i,j,k
@@ -670,10 +670,10 @@
  call mpas_pool_get_array(diag_physics,'rainncv'   ,rainncv   )
  call mpas_pool_get_array(diag_physics,'snowncv'   ,snowncv   )
  call mpas_pool_get_array(diag_physics,'sr'        ,sr        )
- call mpas_pool_get_array(diag_physics,'ZDR' ,ZDR )
- call mpas_pool_get_array(diag_physics,'KDP' ,KDP )
- call mpas_pool_get_array(diag_physics,'LDR' ,LDR )
- call mpas_pool_get_array(diag_physics,'RHV' ,RHV )
+ call mpas_pool_get_array(diag_physics,'zdr' ,zdr )
+ call mpas_pool_get_array(diag_physics,'kdp' ,kdp )
+ call mpas_pool_get_array(diag_physics,'smlf' ,smlf )
+ call mpas_pool_get_array(diag_physics,'gmlf' ,gmlf )
 
  IF ( microp_scheme == "mp_nssl2m" ) THEN
  call mpas_pool_get_array(diag_physics,'hailncv',hailncv)
@@ -726,17 +726,26 @@
  end select microp_select
 
  microp2_select: select case(microp_scheme)
-    case("mp_tcwa2")
-       do j = jts, jte
-       do k = kts, kte
-       do i = its, ite
-          ZDR_p(i,k,j) = 0._RKIND
-          KDP_p(i,k,j) = 0._RKIND
-          LDR_p(i,k,j) = -99.
-          RHV_p(i,k,j) = 1.
-       enddo
-       enddo
-       enddo
+
+       case("mp_tcwa2")
+          do i = its, ite
+          do k = kts, kte
+             zdr(k,i) = 0._RKIND
+             kdp(k,i) = 0._RKIND
+             smlf(k,i) = 0._RKIND
+             gmlf(k,i) = 0._RKIND
+          enddo
+          enddo
+          do j = jts, jte
+          do k = kts, kte
+          do i = its, ite
+             zdr_p(i,k,j) = 0._RKIND
+             kdp_p(i,k,j) = 0._RKIND
+             smlf_p(i,k,j) = 0._RKIND
+             gmlf_p(i,k,j) = 0._RKIND
+          enddo
+          enddo
+          enddo
 
     case default
  end select microp2_select
